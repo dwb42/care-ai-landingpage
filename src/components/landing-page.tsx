@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
-const WHATSAPP_NUMBER = "49XXXXXXXXXXX";
+const WHATSAPP_NUMBER = "4915757131669";
 const WHATSAPP_PRE_TEXT = "Hallo%2C%20ich%20suche%20Hilfe%20beim%20Pflegegeld.%20Kannst%20du%20mir%20helfen%3F";
 const MARKETING_OS_URL = process.env.NEXT_PUBLIC_MARKETING_OS_URL || "http://localhost:4000";
 const PRODUCT_ID = "prd_pflegemax_core";
