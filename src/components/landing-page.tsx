@@ -5,7 +5,8 @@ import Link from "next/link";
 
 const WHATSAPP_NUMBER = "49XXXXXXXXXXX";
 const WHATSAPP_PRE_TEXT = "Hallo%2C%20ich%20suche%20Hilfe%20beim%20Pflegegeld.%20Kannst%20du%20mir%20helfen%3F";
-// const MARKETING_OS_ENDPOINT = "https://example.com/events";
+const MARKETING_OS_URL = process.env.NEXT_PUBLIC_MARKETING_OS_URL || "http://localhost:4000";
+const PRODUCT_ID = "prd_pflegemax_core";
 
 function generateClickId() {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -29,11 +30,31 @@ function getUtmParams() {
 
 function sendEvent(event: Record<string, unknown>) {
   console.log("[LP Event]", JSON.stringify(event, null, 2));
-  // fetch(MARKETING_OS_ENDPOINT, {
-  //   method: "POST",
-  //   headers: { "Content-Type": "application/json" },
-  //   body: JSON.stringify(event),
-  // });
+
+  const outcomePayload = {
+    productId: PRODUCT_ID,
+    type: event.event as string,
+    occurredAt: event.timestamp as string,
+    sessionRef: event.pm_cid as string,
+    attribution: {
+      gclid: event.gclid || null,
+      utm_source: event.utm_source || null,
+      utm_medium: event.utm_medium || null,
+      utm_campaign: event.utm_campaign || null,
+      utm_content: event.utm_content || null,
+      utm_term: event.utm_term || null,
+      lp_variant: event.lp_variant || null,
+    },
+    payload: {
+      button_position: event.button_position || null,
+    },
+  };
+
+  fetch(`${MARKETING_OS_URL}/outcomes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(outcomePayload),
+  }).catch((err) => console.warn("[LP Event] Failed to send:", err.message));
 }
 
 const FAQ_ITEMS = [
