@@ -10,11 +10,11 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   title: "Kostenlose Pflegeberatung — Schritt für Schritt, per Chat",
   description:
-    "Unsere Pflegeberatung hilft dir beim Pflegegrad-Antrag, bei der Vorbereitung auf die Begutachtung und beim Widerspruch — verständlich erklärt, direkt über WhatsApp, Telegram oder Signal.",
+    "Unsere Pflegeberatung hilft dir beim Pflegegrad-Antrag, bei der Vorbereitung auf die Begutachtung und beim Widerspruch — verständlich erklärt, per WhatsApp.",
   openGraph: {
     title: "Kostenlose Pflegeberatung — Schritt für Schritt, per Chat",
     description:
-      "Unsere Pflegeberatung hilft dir beim Pflegegrad-Antrag, bei der Vorbereitung auf die Begutachtung und beim Widerspruch — verständlich erklärt, direkt über WhatsApp, Telegram oder Signal.",
+      "Unsere Pflegeberatung hilft dir beim Pflegegrad-Antrag, bei der Vorbereitung auf die Begutachtung und beim Widerspruch — verständlich erklärt, per WhatsApp.",
     locale: "de_DE",
     type: "website",
   },
