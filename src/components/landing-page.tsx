@@ -193,7 +193,7 @@ export function LandingPage() {
     const cid = generateClickId();
     clickIdRef.current = cid;
 
-    const link = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_PRE_TEXT}%0A%23ref-${cid}`;
+    const link = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_PRE_TEXT}`;
     setWaLink(link);
 
     const utm = getUtmParams();
