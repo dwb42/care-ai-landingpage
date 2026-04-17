@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 const WHATSAPP_NUMBER = "4915757131669";
-const WHATSAPP_PRE_TEXT = "Hallo%2C%20ich%20suche%20Hilfe%20beim%20Pflegegeld.%20Kannst%20du%20mir%20helfen%3F";
+const WHATSAPP_PRE_TEXT = "Hallo%2C%20ich%20brauche%20Hilfe%20beim%20Pflegegeld.";
 const MARKETING_OS_URL = process.env.NEXT_PUBLIC_MARKETING_OS_URL || "http://localhost:4000";
 const PRODUCT_ID = "prd_pflegemax_core";
 
@@ -47,6 +47,7 @@ function sendEvent(event: Record<string, unknown>) {
     },
     payload: {
       button_position: event.button_position || null,
+      time_on_page_ms: typeof event.time_on_page_ms === "number" ? event.time_on_page_ms : null,
     },
   };
 
@@ -60,42 +61,23 @@ function sendEvent(event: Record<string, unknown>) {
 const FAQ_ITEMS = [
   {
     q: "Ist das wirklich kostenlos?",
-    a: "Ja. Du kannst uns kostenlos auf WhatsApp schreiben und wir helfen dir, deinen Antrag vorzubereiten.",
+    a: "Ja. Dir entstehen keine Kosten, weder für den Chat noch für den vorbereiteten Antrag. Kein Abo, keine versteckten Gebühren.",
   },
   {
-    q: "Warum WhatsApp und keine Website mit Formular?",
-    a: "Weil WhatsApp das ist, was die meisten Menschen ohnehin auf dem Handy haben. Kein Login, kein Passwort. Du schreibst uns wie einem Bekannten.",
+    q: "Wollt ihr mir etwas verkaufen?",
+    a: "Nein. Wir vermitteln dich an niemanden, verkaufen keine Versicherungen und empfehlen keine Pflegedienste gegen Provision. Das Angebot ist für dich kostenlos — Punkt.",
+  },
+  {
+    q: "Wie schnell antwortet ihr?",
+    a: "Innerhalb weniger Sekunden. Die Antworten kommen von unserem KI-Pflegeberater — rund um die Uhr, sofort, ohne Wartezeit. Du musst nicht live am Gerät bleiben.",
+  },
+  {
+    q: "Was mache ich mit dem fertigen Antrag?",
+    a: "Wir helfen dir, alle nötigen Angaben und Unterlagen zu sammeln. Am Ende hast du einen vollständig vorbereiteten Antrag, den du bei deiner Pflegekasse einreichst — wir sagen dir Schritt für Schritt, wie und wohin.",
   },
   {
     q: "Was macht ihr mit meinen Daten?",
-    a: "Wir verwenden deine Nachrichten ausschließlich, um dich zu beraten. Details stehen in unserer Datenschutzerklärung. Wenn du nicht einverstanden bist, kannst du den Chat jederzeit beenden.",
-  },
-  {
-    q: "Seid ihr eine Behörde oder eine Pflegekasse?",
-    a: "Nein. Wir sind eine unabhängige virtuelle Pflegeberatung der B42 GmbH. Wir unterstützen dich dabei, deine Rechte gegenüber deiner Pflegekasse wahrzunehmen.",
-  },
-  {
-    q: "Was, wenn ich mitten im Chat nicht weiterweiß?",
-    a: "Kein Problem. Du kannst den Chat jederzeit pausieren und später fortsetzen. Wir bleiben dran.",
-  },
-];
-
-const SERVICES = [
-  {
-    title: "Pflegegeld-Antrag stellen",
-    text: "Wir erstellen mit dir einen fertigen Antrag als PDF — du musst ihn nur noch einreichen.",
-  },
-  {
-    title: "Pflegegrad einschätzen",
-    text: "In einem ruhigen Gespräch schätzen wir gemeinsam ein, welcher Pflegegrad realistisch ist — und wie du dich auf die Begutachtung vorbereitest.",
-  },
-  {
-    title: "Leistungen kombinieren",
-    text: "Wenn der Pflegegrad steht: Wir zeigen dir, welche Leistungen dir zustehen und wie du sie sinnvoll kombinierst.",
-  },
-  {
-    title: "Überblick bekommen",
-    text: "Du weißt noch nicht genau, was du brauchst? Wir geben dir einen ruhigen Überblick und den passenden ersten Schritt.",
+    a: "Wir nutzen deine Nachrichten ausschließlich, um dich zu beraten. Wir geben sie nicht an Dritte weiter. Die vollständigen Details stehen in unserer Datenschutzerklärung. Wenn du nicht einverstanden bist, kannst du den Chat jederzeit beenden.",
   },
 ];
 
@@ -103,7 +85,7 @@ const TRUST_ITEMS = [
   { icon: "building", text: "Ein Angebot der B42 GmbH. Volles Impressum im Footer." },
   { icon: "shield", text: "Datenschutz nach DSGVO. Deine Nachrichten werden vertraulich behandelt, nicht weitergegeben." },
   { icon: "heart", text: "Komplett kostenlos. Kein Verkauf, keine versteckten Kosten." },
-  { icon: "clock", text: "Rund um die Uhr erreichbar. Sofortige Antwort, auch nachts und am Wochenende." },
+  { icon: "clock", text: "Rund um die Uhr erreichbar. Auch nachts und am Wochenende." },
   { icon: "info", text: "Wir sind kein Ersatz für den Arzt oder den Medizinischen Dienst — aber wir helfen dir, dich darauf vorzubereiten." },
 ];
 
@@ -202,9 +184,12 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 
 export function LandingPage() {
   const clickIdRef = useRef<string>("");
+  const loadedAtRef = useRef<number>(0);
   const [waLink, setWaLink] = useState("#");
 
   useEffect(() => {
+    loadedAtRef.current = Date.now();
+
     const cid = generateClickId();
     clickIdRef.current = cid;
 
@@ -216,7 +201,7 @@ export function LandingPage() {
       event: "lp_visit",
       pm_cid: cid,
       ...utm,
-      lp_variant: "whatsapp-only-v01",
+      lp_variant: "whatsapp-only-v02",
       timestamp: new Date().toISOString(),
     });
   }, []);
@@ -226,6 +211,7 @@ export function LandingPage() {
       event: "cta_click",
       pm_cid: clickIdRef.current,
       button_position: position,
+      time_on_page_ms: loadedAtRef.current > 0 ? Date.now() - loadedAtRef.current : null,
       timestamp: new Date().toISOString(),
     });
   }
@@ -234,65 +220,72 @@ export function LandingPage() {
     <main className="mx-auto max-w-[640px] px-6">
       {/* [1] Hero */}
       <section className="flex min-h-[calc(100dvh-2rem)] flex-col justify-center py-12">
+        <p className="mb-3 text-xs font-medium uppercase tracking-[0.12em] leading-tight text-teal">
+          <span className="whitespace-nowrap">PFLEGEGRAD</span> · <span className="whitespace-nowrap">PFLEGEGELD</span> · <span className="whitespace-nowrap">PFLEGELEISTUNGEN</span>
+        </p>
         <h1 className="text-[clamp(1.75rem,5vw,2.5rem)] font-bold leading-tight tracking-tight text-foreground">
-          Hilfe beim Pflegegeld-Antrag — per Chat.
+          Brauchst du Hilfe beim Pflegegeld-Antrag?
         </h1>
         <p className="mt-4 text-lg leading-relaxed text-muted">
-          Deine virtuelle Pflegeberatung per WhatsApp. Schreib uns — wir begleiten dich Schritt für Schritt.
+          Schreib uns per WhatsApp. Wir führen dich durch den gesamten Prozess — von der ersten Frage bis zum Bescheid.
         </p>
         <div className="mt-8">
           <CtaButton position="hero" href={waLink} onClick={() => handleCtaClick("hero")} />
         </div>
-        <p className="mt-4 text-sm text-muted">
-          Rund um die Uhr. Sofortige Antwort. Kostenlos.
+        <div className="mt-4 text-sm text-muted">
+          <p>Rund um die Uhr verfügbar</p>
+          <p>Komplett kostenlos</p>
+        </div>
+      </section>
+
+      {/* [2] Ist das was für mich? */}
+      <section className="py-16">
+        <h2 className="text-xl font-bold text-foreground">Ist das was für mich?</h2>
+
+        <div className="mt-8 space-y-5">
+          <p className="text-lg font-medium leading-relaxed text-foreground">
+            Willst du für dich oder einen Angehörigen Pflegegeld oder Pflegeleistungen beantragen?
+          </p>
+          <p className="text-lg font-medium leading-relaxed text-foreground">
+            Bist du überfordert mit den Regeln — und hast Angst, etwas falsch zu machen und am Ende weniger zu bekommen, als dir zusteht?
+          </p>
+          <p className="text-lg font-medium leading-relaxed text-foreground">
+            Hättest du gerne jemanden an deiner Seite, der dich durch den Prozess führt, damit du am Ende das bestmögliche Pflegegeld bekommst?
+          </p>
+        </div>
+
+        <p className="mt-8 text-lg italic text-teal">
+          Dann ist unsere WhatsApp-Pflegeberatung genau das Richtige für dich.
+        </p>
+
+        <hr className="my-8 border-border" />
+
+        <div className="space-y-4 text-base leading-relaxed text-foreground">
+          <p>
+            Unser virtueller Pflegeberater stellt dir die richtigen Fragen, macht sich ein Bild von eurer Situation, sagt dir, was als Nächstes zu tun ist — und erstellt die Dokumente, die du an deine Pflegekasse schickst.
+          </p>
+          <p className="font-bold">
+            Du musst dich nirgends anmelden, nichts installieren, keine Formulare ausfüllen.
+          </p>
+          <p>
+            Du schreibst uns auf WhatsApp — wie einem Bekannten, der dir hilft.
+          </p>
+          <p>
+            Keine Lust zu tippen? Schick uns eine Sprachnachricht.
+          </p>
+          <p>
+            Oder ein Foto von Dokumenten, die dir wichtig erscheinen — wir holen raus, was wir brauchen.
+          </p>
+        </div>
+
+        <hr className="my-8 border-border" />
+
+        <p className="text-base leading-relaxed text-foreground">
+          <span className="font-bold">Probier&apos;s einfach aus.</span> Es kostet nichts. Wenn&apos;s nicht passt, hast du nichts verloren.
         </p>
       </section>
 
-      {/* [2] Was wir konkret tun */}
-      <section className="py-16">
-        <h2 className="text-xl font-bold text-foreground">
-          Vier konkrete Dinge, bei denen wir dich unterstützen:
-        </h2>
-        <div className="mt-8 space-y-6">
-          {SERVICES.map((s, i) => (
-            <div key={i} className="rounded-2xl bg-white p-6 shadow-sm">
-              <div className="flex items-start gap-4">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-teal/10 text-sm font-bold text-teal">
-                  {i + 1}
-                </span>
-                <div>
-                  <h3 className="font-semibold text-foreground">{s.title}</h3>
-                  <p className="mt-1.5 text-base leading-relaxed text-muted">{s.text}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* [3] So läuft es ab */}
-      <section className="py-16">
-        <h2 className="text-xl font-bold text-foreground">So läuft es ab:</h2>
-        <div className="mt-8 space-y-0">
-          {[
-            "Du klickst auf den Button und startest einen Chat mit uns auf WhatsApp.",
-            "Wir stellen ein paar ruhige Fragen — du schreibst einfach in deinen eigenen Worten.",
-            "Am Ende hast du das, was du brauchst: einen fertigen Antrag, eine Einschätzung oder einen klaren nächsten Schritt.",
-          ].map((step, i) => (
-            <div key={i} className="flex gap-4 py-4">
-              <div className="flex flex-col items-center">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-teal text-sm font-bold text-white">
-                  {i + 1}
-                </span>
-                {i < 2 && <div className="mt-2 h-full w-px bg-border" />}
-              </div>
-              <p className="pt-1 text-base leading-relaxed text-foreground">{step}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* [4] Trust-Block */}
+      {/* [3] Trust-Block */}
       <section className="rounded-2xl bg-section-alt px-6 py-10">
         <h2 className="text-xl font-bold text-foreground">Warum du uns vertrauen kannst:</h2>
         <ul className="mt-6 space-y-4">
@@ -305,7 +298,7 @@ export function LandingPage() {
         </ul>
       </section>
 
-      {/* [5] Mini-FAQ */}
+      {/* [4] Mini-FAQ */}
       <section className="py-16">
         <h2 className="text-xl font-bold text-foreground">Häufige Fragen</h2>
         <div className="mt-6">
@@ -315,7 +308,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* [6] CTA-Wiederholung */}
+      {/* [5] CTA-Wiederholung */}
       <section className="py-16 text-center">
         <CtaButton position="bottom" href={waLink} onClick={() => handleCtaClick("bottom")} />
         <p className="mt-4 text-sm text-muted">
@@ -323,7 +316,7 @@ export function LandingPage() {
         </p>
       </section>
 
-      {/* [7] Footer */}
+      {/* [6] Footer */}
       <footer className="border-t border-border py-8 text-center text-sm text-muted">
         Ein Angebot der B42 GmbH · <Link href="/impressum" scroll={true} className="underline hover:text-foreground">Impressum</Link> · <Link href="/datenschutz" scroll={true} className="underline hover:text-foreground">Datenschutz</Link>
       </footer>
