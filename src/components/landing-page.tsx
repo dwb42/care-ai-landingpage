@@ -65,15 +65,15 @@ const FAQ_ITEMS = [
   },
   {
     q: "Wollt ihr mir etwas verkaufen?",
-    a: "Nein. Wir vermitteln dich an niemanden, verkaufen keine Versicherungen und empfehlen keine Pflegedienste gegen Provision. Das Angebot ist für dich kostenlos — Punkt.",
+    a: "Nein. Wir vermitteln dich an niemanden, verkaufen keine Versicherungen und empfehlen keine Pflegedienste gegen Provision. Das Angebot ist für dich kostenlos. Punkt.",
   },
   {
     q: "Wie schnell antwortet ihr?",
-    a: "Innerhalb weniger Sekunden. Die Antworten kommen von unserem KI-Pflegeberater — rund um die Uhr, sofort, ohne Wartezeit. Du musst nicht live am Gerät bleiben.",
+    a: "Innerhalb weniger Sekunden. Die Antworten kommen von unserem KI-Pflegeberater. Rund um die Uhr, sofort, ohne Wartezeit. Du musst nicht live am Gerät bleiben.",
   },
   {
     q: "Was mache ich mit dem fertigen Antrag?",
-    a: "Wir helfen dir, alle nötigen Angaben und Unterlagen zu sammeln. Am Ende hast du einen vollständig vorbereiteten Antrag, den du bei deiner Pflegekasse einreichst — wir sagen dir Schritt für Schritt, wie und wohin.",
+    a: "Wir helfen dir, alle nötigen Angaben und Unterlagen zu sammeln. Am Ende hast du einen vollständig vorbereiteten Antrag, den du bei deiner Pflegekasse einreichst. Wir sagen dir Schritt für Schritt, wie und wohin.",
   },
   {
     q: "Was macht ihr mit meinen Daten?",
@@ -81,49 +81,88 @@ const FAQ_ITEMS = [
   },
 ];
 
+const PAIN_BULLETS = [
+  {
+    headline: "Pflegegeld beantragen.",
+    body: "Für dich oder einen Angehörigen, und du weißt nicht, wo du anfangen sollst.",
+  },
+  {
+    headline: "Angst, etwas falsch zu machen.",
+    body: "Du hast gehört, dass viele weniger bekommen, als ihnen zusteht. Nur weil im Antrag das Falsche steht.",
+  },
+  {
+    headline: "Jemand, der mit dir durchgeht.",
+    body: "Statt allein durch fünfzehn Behörden-Seiten zu googeln.",
+  },
+];
+
+const STEPS = [
+  {
+    headline: "Du schreibst auf WhatsApp.",
+    body: "Ein Klick öffnet WhatsApp. Sag in deinen eigenen Worten, was los ist. Tippen, Sprachnachricht oder ein Foto vom Brief der Pflegekasse, wie du magst.",
+  },
+  {
+    headline: "Der Pflegeberater fragt nach.",
+    body: "Er hört zu und stellt die richtigen Fragen, bis er ein klares Bild von eurer Situation hat. Du musst nichts vorbereiten.",
+  },
+  {
+    headline: "Du bekommst, was die Pflegekasse will.",
+    body: "Am Ende hast du die Unterlagen für den Pflegegrad-Antrag und weißt genau, wohin damit. Kein Login, keine Installation, kein Formular zum Selbst-Ausfüllen.",
+  },
+];
+
 const TRUST_ITEMS = [
-  { icon: "building", text: "Ein Angebot der B42 GmbH. Volles Impressum im Footer." },
-  { icon: "shield", text: "Datenschutz nach DSGVO. Deine Nachrichten werden vertraulich behandelt, nicht weitergegeben." },
-  { icon: "heart", text: "Komplett kostenlos. Kein Verkauf, keine versteckten Kosten." },
-  { icon: "clock", text: "Rund um die Uhr erreichbar. Auch nachts und am Wochenende." },
-  { icon: "info", text: "Wir sind kein Ersatz für den Arzt oder den Medizinischen Dienst — aber wir helfen dir, dich darauf vorzubereiten." },
+  {
+    icon: "no-handover",
+    headline: "Wir verkaufen dir nichts.",
+    body: "Wir vermitteln dich an niemanden gegen Provision, verkaufen keine Versicherungen und schicken dir keine Werbe-Mails. Das Angebot ist für dich kostenlos. Sonst nichts.",
+  },
+  {
+    icon: "pause",
+    headline: "Du entscheidest, wann Schluss ist.",
+    body: "Du kannst den Chat jederzeit pausieren oder ganz beenden. Wir machen dir keinen Druck zurückzukommen.",
+  },
+  {
+    icon: "bolt",
+    headline: "Antwort in Sekunden, Tag und Nacht.",
+    body: "Hinter dem Chat steht ein KI-Pflegeberater. Genau deshalb bekommst du sofort eine Antwort, auch nachts und am Wochenende. Ohne Rückrufsorge, ohne Verkaufsdruck, ohne Wartezeit.",
+  },
 ];
 
 function TrustIcon({ type }: { type: string }) {
   const cls = "h-5 w-5 text-teal shrink-0";
   switch (type) {
-    case "building":
+    case "check":
       return (
         <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
         </svg>
       );
-    case "shield":
+    case "no-handover":
       return (
         <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+          <circle cx="12" cy="12" r="9" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5.636 5.636l12.728 12.728" />
         </svg>
       );
-    case "heart":
+    case "pause":
       return (
         <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
         </svg>
       );
-    case "clock":
+    case "bolt":
       return (
         <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      );
-    case "info":
-      return (
-        <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
         </svg>
       );
     default:
-      return null;
+      return (
+        <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      );
   }
 }
 
@@ -135,7 +174,7 @@ function WhatsAppIcon() {
   );
 }
 
-function CtaButton({ position, href, onClick }: { position: "hero" | "bottom"; href: string; onClick: () => void }) {
+function CtaButton({ position, href, onClick }: { position: "hero" | "mid" | "bottom"; href: string; onClick: () => void }) {
   return (
     <a
       href={href}
@@ -153,28 +192,38 @@ function CtaButton({ position, href, onClick }: { position: "hero" | "bottom"; h
 
 function FaqItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [maxHeight, setMaxHeight] = useState(0);
+
+  useEffect(() => {
+    if (!contentRef.current) return;
+    setMaxHeight(open ? contentRef.current.scrollHeight : 0);
+  }, [open, answer]);
+
   return (
     <div className="border-b border-border">
       <button
+        type="button"
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between py-5 text-left text-base font-medium text-foreground"
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-4 py-5 text-left text-base font-medium text-foreground"
       >
-        {question}
+        <span>{question}</span>
         <svg
           className={`h-5 w-5 shrink-0 text-muted transition-transform duration-200 ${open ? "rotate-180" : ""}`}
           fill="none"
           viewBox="0 0 24 24"
-          strokeWidth={2}
+          strokeWidth={1.5}
           stroke="currentColor"
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
         </svg>
       </button>
       <div
-        className="grid transition-[grid-template-rows] duration-300 ease-out"
-        style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
+        className="overflow-hidden transition-[max-height] duration-300 ease-out"
+        style={{ maxHeight: `${maxHeight}px` }}
       >
-        <div className="overflow-hidden">
+        <div ref={contentRef}>
           <p className="pb-5 text-base leading-relaxed text-muted">{answer}</p>
         </div>
       </div>
@@ -201,12 +250,12 @@ export function LandingPage() {
       event: "lp_visit",
       pm_cid: cid,
       ...utm,
-      lp_variant: "whatsapp-only-v02",
+      lp_variant: "whatsapp-only-v03",
       timestamp: new Date().toISOString(),
     });
   }, []);
 
-  function handleCtaClick(position: "hero" | "bottom") {
+  function handleCtaClick(position: "hero" | "mid" | "bottom") {
     sendEvent({
       event: "cta_click",
       pm_cid: clickIdRef.current,
@@ -227,7 +276,7 @@ export function LandingPage() {
           Brauchst du Hilfe beim Pflegegeld-Antrag?
         </h1>
         <p className="mt-4 text-lg leading-relaxed text-muted">
-          Schreib uns per WhatsApp. Wir führen dich durch den gesamten Prozess — von der ersten Frage bis zum Bescheid.
+          Schreib uns per WhatsApp. Wir führen dich durch den gesamten Prozess, von der ersten Frage bis zum Bescheid.
         </p>
         <div className="mt-8">
           <CtaButton position="hero" href={waLink} onClick={() => handleCtaClick("hero")} />
@@ -242,57 +291,58 @@ export function LandingPage() {
       <section className="py-16">
         <h2 className="text-xl font-bold text-foreground">Ist das was für mich?</h2>
 
-        <div className="mt-8 space-y-5">
-          <p className="text-lg font-medium leading-relaxed text-foreground">
-            Willst du für dich oder einen Angehörigen Pflegegeld oder Pflegeleistungen beantragen?
-          </p>
-          <p className="text-lg font-medium leading-relaxed text-foreground">
-            Bist du überfordert mit den Regeln — und hast Angst, etwas falsch zu machen und am Ende weniger zu bekommen, als dir zusteht?
-          </p>
-          <p className="text-lg font-medium leading-relaxed text-foreground">
-            Hättest du gerne jemanden an deiner Seite, der dich durch den Prozess führt, damit du am Ende das bestmögliche Pflegegeld bekommst?
-          </p>
+        {/* [2.1] Pain-Bullets */}
+        <ul className="mt-8 space-y-5">
+          {PAIN_BULLETS.map((item, i) => (
+            <li key={i} className="flex items-start gap-3">
+              <TrustIcon type="check" />
+              <span className="text-base leading-relaxed text-foreground">
+                <span className="font-semibold">{item.headline}</span>{" "}
+                <span className="text-muted">{item.body}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        {/* [2.2] Lead-In zur Mechanik */}
+        <div className="mt-12 border-t border-border pt-8">
+          <p className="text-base text-muted">So läuft es ab:</p>
         </div>
 
-        <p className="mt-8 text-lg italic text-teal">
-          Dann ist unsere WhatsApp-Pflegeberatung genau das Richtige für dich.
-        </p>
+        {/* [2.3] How-it-works-Steps */}
+        <ol className="mt-6 space-y-6">
+          {STEPS.map((step, i) => (
+            <li key={i} className="flex items-start gap-4">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-teal text-sm font-semibold text-white">
+                {i + 1}
+              </span>
+              <div className="pt-1">
+                <p className="text-base font-semibold text-foreground">{step.headline}</p>
+                <p className="mt-1 text-base leading-relaxed text-muted">{step.body}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
 
-        <hr className="my-8 border-border" />
-
-        <div className="space-y-4 text-base leading-relaxed text-foreground">
-          <p>
-            Unser virtueller Pflegeberater stellt dir die richtigen Fragen, macht sich ein Bild von eurer Situation, sagt dir, was als Nächstes zu tun ist — und erstellt die Dokumente, die du an deine Pflegekasse schickst.
-          </p>
-          <p className="font-bold">
-            Du musst dich nirgends anmelden, nichts installieren, keine Formulare ausfüllen.
-          </p>
-          <p>
-            Du schreibst uns auf WhatsApp — wie einem Bekannten, der dir hilft.
-          </p>
-          <p>
-            Keine Lust zu tippen? Schick uns eine Sprachnachricht.
-          </p>
-          <p>
-            Oder ein Foto von Dokumenten, die dir wichtig erscheinen — wir holen raus, was wir brauchen.
-          </p>
+        {/* [2.4] Inline-CTA */}
+        <div className="mt-10 flex flex-col items-center">
+          <CtaButton position="mid" href={waLink} onClick={() => handleCtaClick("mid")} />
+          <p className="mt-3 text-sm text-muted">Ein Klick. Kein Formular.</p>
         </div>
 
-        <hr className="my-8 border-border" />
-
-        <p className="text-base leading-relaxed text-foreground">
-          <span className="font-bold">Probier&apos;s einfach aus.</span> Es kostet nichts. Wenn&apos;s nicht passt, hast du nichts verloren.
-        </p>
       </section>
 
       {/* [3] Trust-Block */}
       <section className="rounded-2xl bg-section-alt px-6 py-10">
-        <h2 className="text-xl font-bold text-foreground">Warum du uns vertrauen kannst:</h2>
-        <ul className="mt-6 space-y-4">
+        <h2 className="text-xl font-bold text-foreground">Was wir dir versprechen.</h2>
+        <ul className="mt-6 space-y-6">
           {TRUST_ITEMS.map((item, i) => (
             <li key={i} className="flex items-start gap-3">
               <TrustIcon type={item.icon} />
-              <span className="text-base leading-relaxed text-foreground">{item.text}</span>
+              <div>
+                <p className="text-base font-semibold text-foreground">{item.headline}</p>
+                <p className="mt-1 text-base leading-relaxed text-muted">{item.body}</p>
+              </div>
             </li>
           ))}
         </ul>
