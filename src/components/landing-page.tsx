@@ -7,6 +7,20 @@ const WHATSAPP_NUMBER = "4915757131669";
 const WHATSAPP_PRE_TEXT = "Hallo%2C%20ich%20brauche%20Hilfe%20beim%20Pflegegeld.";
 const MARKETING_OS_URL = process.env.NEXT_PUBLIC_MARKETING_OS_URL || "http://localhost:4000";
 const PRODUCT_ID = "prd_pflegemax_core";
+const ATTRIBUTION_STORAGE_KEY = "pm_attribution";
+const ATTRIBUTION_KEYS = [
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_content",
+  "utm_term",
+  "gclid",
+  "gbraid",
+  "wbraid",
+] as const;
+
+type AttributionKey = (typeof ATTRIBUTION_KEYS)[number];
+type Attribution = Partial<Record<AttributionKey, string>>;
 
 function generateClickId() {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -17,36 +31,73 @@ function generateClickId() {
   return id;
 }
 
-function getUtmParams() {
+function readAttributionFromUrl(): Attribution {
   if (typeof window === "undefined") return {};
   const params = new URLSearchParams(window.location.search);
-  const keys = ["gclid", "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
-  const result: Record<string, string | null> = {};
-  for (const key of keys) {
-    result[key] = params.get(key) || null;
+  const result: Attribution = {};
+  for (const key of ATTRIBUTION_KEYS) {
+    const val = params.get(key);
+    if (val) result[key] = val;
   }
   return result;
 }
 
-function sendEvent(event: Record<string, unknown>) {
+function readStoredAttribution(): Attribution {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(ATTRIBUTION_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return {};
+    const result: Attribution = {};
+    for (const key of ATTRIBUTION_KEYS) {
+      const val = (parsed as Record<string, unknown>)[key];
+      if (typeof val === "string" && val.length > 0) result[key] = val;
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+// First-touch wins: wenn bereits Attribution persistiert ist, nicht überschreiben.
+function captureFirstTouchAttribution(): Attribution {
+  const stored = readStoredAttribution();
+  if (Object.keys(stored).length > 0) return stored;
+  const fromUrl = readAttributionFromUrl();
+  if (Object.keys(fromUrl).length === 0) return {};
+  try {
+    window.localStorage.setItem(ATTRIBUTION_STORAGE_KEY, JSON.stringify(fromUrl));
+  } catch {
+    // ignore (Private Mode / Quota)
+  }
+  return fromUrl;
+}
+
+type LpEvent = {
+  event: "lp_visit" | "cta_click";
+  pm_cid: string;
+  attribution: Attribution;
+  lp_variant?: string;
+  button_position?: "hero" | "mid" | "bottom";
+  time_on_page_ms?: number | null;
+  timestamp: string;
+};
+
+function sendEvent(event: LpEvent) {
   console.log("[LP Event]", JSON.stringify(event, null, 2));
 
   const outcomePayload = {
     productId: PRODUCT_ID,
-    type: event.event as string,
-    occurredAt: event.timestamp as string,
-    sessionRef: event.pm_cid as string,
+    type: event.event,
+    occurredAt: event.timestamp,
+    sessionRef: event.pm_cid,
     attribution: {
-      gclid: event.gclid || null,
-      utm_source: event.utm_source || null,
-      utm_medium: event.utm_medium || null,
-      utm_campaign: event.utm_campaign || null,
-      utm_content: event.utm_content || null,
-      utm_term: event.utm_term || null,
-      lp_variant: event.lp_variant || null,
+      ...event.attribution,
+      ...(event.lp_variant ? { lp_variant: event.lp_variant } : {}),
     },
     payload: {
-      button_position: event.button_position || null,
+      button_position: event.button_position ?? null,
       time_on_page_ms: typeof event.time_on_page_ms === "number" ? event.time_on_page_ms : null,
     },
   };
@@ -234,6 +285,7 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 export function LandingPage() {
   const clickIdRef = useRef<string>("");
   const loadedAtRef = useRef<number>(0);
+  const attributionRef = useRef<Attribution>({});
   const [waLink, setWaLink] = useState("#");
 
   useEffect(() => {
@@ -245,11 +297,13 @@ export function LandingPage() {
     const link = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_PRE_TEXT}`;
     setWaLink(link);
 
-    const utm = getUtmParams();
+    const attribution = captureFirstTouchAttribution();
+    attributionRef.current = attribution;
+
     sendEvent({
       event: "lp_visit",
       pm_cid: cid,
-      ...utm,
+      attribution,
       lp_variant: "whatsapp-only-v03",
       timestamp: new Date().toISOString(),
     });
@@ -259,6 +313,7 @@ export function LandingPage() {
     sendEvent({
       event: "cta_click",
       pm_cid: clickIdRef.current,
+      attribution: attributionRef.current,
       button_position: position,
       time_on_page_ms: loadedAtRef.current > 0 ? Date.now() - loadedAtRef.current : null,
       timestamp: new Date().toISOString(),
