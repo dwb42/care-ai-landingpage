@@ -4,9 +4,23 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 const WHATSAPP_NUMBER = "4915757131669";
-const WHATSAPP_PRE_TEXT = "Hallo%2C%20ich%20suche%20Hilfe%20beim%20Pflegegeld.%20Kannst%20du%20mir%20helfen%3F";
+const WHATSAPP_PRE_TEXT = "Hallo%2C%20ich%20brauche%20Hilfe%20beim%20Pflegegeld.";
 const MARKETING_OS_URL = process.env.NEXT_PUBLIC_MARKETING_OS_URL || "http://localhost:4000";
 const PRODUCT_ID = "prd_pflegemax_core";
+const ATTRIBUTION_STORAGE_KEY = "pm_attribution";
+const ATTRIBUTION_KEYS = [
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_content",
+  "utm_term",
+  "gclid",
+  "gbraid",
+  "wbraid",
+] as const;
+
+type AttributionKey = (typeof ATTRIBUTION_KEYS)[number];
+type Attribution = Partial<Record<AttributionKey, string>>;
 
 function generateClickId() {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -17,36 +31,74 @@ function generateClickId() {
   return id;
 }
 
-function getUtmParams() {
+function readAttributionFromUrl(): Attribution {
   if (typeof window === "undefined") return {};
   const params = new URLSearchParams(window.location.search);
-  const keys = ["gclid", "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
-  const result: Record<string, string | null> = {};
-  for (const key of keys) {
-    result[key] = params.get(key) || null;
+  const result: Attribution = {};
+  for (const key of ATTRIBUTION_KEYS) {
+    const val = params.get(key);
+    if (val) result[key] = val;
   }
   return result;
 }
 
-function sendEvent(event: Record<string, unknown>) {
+function readStoredAttribution(): Attribution {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(ATTRIBUTION_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return {};
+    const result: Attribution = {};
+    for (const key of ATTRIBUTION_KEYS) {
+      const val = (parsed as Record<string, unknown>)[key];
+      if (typeof val === "string" && val.length > 0) result[key] = val;
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+// First-touch wins: wenn bereits Attribution persistiert ist, nicht überschreiben.
+function captureFirstTouchAttribution(): Attribution {
+  const stored = readStoredAttribution();
+  if (Object.keys(stored).length > 0) return stored;
+  const fromUrl = readAttributionFromUrl();
+  if (Object.keys(fromUrl).length === 0) return {};
+  try {
+    window.localStorage.setItem(ATTRIBUTION_STORAGE_KEY, JSON.stringify(fromUrl));
+  } catch {
+    // ignore (Private Mode / Quota)
+  }
+  return fromUrl;
+}
+
+type LpEvent = {
+  event: "lp_visit" | "cta_click";
+  pm_cid: string;
+  attribution: Attribution;
+  lp_variant?: string;
+  button_position?: "hero" | "mid" | "bottom";
+  time_on_page_ms?: number | null;
+  timestamp: string;
+};
+
+function sendEvent(event: LpEvent) {
   console.log("[LP Event]", JSON.stringify(event, null, 2));
 
   const outcomePayload = {
     productId: PRODUCT_ID,
-    type: event.event as string,
-    occurredAt: event.timestamp as string,
-    sessionRef: event.pm_cid as string,
+    type: event.event,
+    occurredAt: event.timestamp,
+    sessionRef: event.pm_cid,
     attribution: {
-      gclid: event.gclid || null,
-      utm_source: event.utm_source || null,
-      utm_medium: event.utm_medium || null,
-      utm_campaign: event.utm_campaign || null,
-      utm_content: event.utm_content || null,
-      utm_term: event.utm_term || null,
-      lp_variant: event.lp_variant || null,
+      ...event.attribution,
+      ...(event.lp_variant ? { lp_variant: event.lp_variant } : {}),
     },
     payload: {
-      button_position: event.button_position || null,
+      button_position: event.button_position ?? null,
+      time_on_page_ms: typeof event.time_on_page_ms === "number" ? event.time_on_page_ms : null,
     },
   };
 
@@ -60,88 +112,108 @@ function sendEvent(event: Record<string, unknown>) {
 const FAQ_ITEMS = [
   {
     q: "Ist das wirklich kostenlos?",
-    a: "Ja. Du kannst uns kostenlos auf WhatsApp schreiben und wir helfen dir, deinen Antrag vorzubereiten.",
+    a: "Ja. Dir entstehen keine Kosten, weder für den Chat noch für den vorbereiteten Antrag. Kein Abo, keine versteckten Gebühren.",
   },
   {
-    q: "Warum WhatsApp und keine Website mit Formular?",
-    a: "Weil WhatsApp das ist, was die meisten Menschen ohnehin auf dem Handy haben. Kein Login, kein Passwort. Du schreibst uns wie einem Bekannten.",
+    q: "Wollt ihr mir etwas verkaufen?",
+    a: "Nein. Wir vermitteln dich an niemanden, verkaufen keine Versicherungen und empfehlen keine Pflegedienste gegen Provision. Das Angebot ist für dich kostenlos. Punkt.",
+  },
+  {
+    q: "Wie schnell antwortet ihr?",
+    a: "Innerhalb weniger Sekunden. Die Antworten kommen von unserem KI-Pflegeberater. Rund um die Uhr, sofort, ohne Wartezeit. Du musst nicht live am Gerät bleiben.",
+  },
+  {
+    q: "Was mache ich mit dem fertigen Antrag?",
+    a: "Wir helfen dir, alle nötigen Angaben und Unterlagen zu sammeln. Am Ende hast du einen vollständig vorbereiteten Antrag, den du bei deiner Pflegekasse einreichst. Wir sagen dir Schritt für Schritt, wie und wohin.",
   },
   {
     q: "Was macht ihr mit meinen Daten?",
-    a: "Wir verwenden deine Nachrichten ausschließlich, um dich zu beraten. Details stehen in unserer Datenschutzerklärung. Wenn du nicht einverstanden bist, kannst du den Chat jederzeit beenden.",
-  },
-  {
-    q: "Seid ihr eine Behörde oder eine Pflegekasse?",
-    a: "Nein. Wir sind eine unabhängige virtuelle Pflegeberatung der B42 GmbH. Wir unterstützen dich dabei, deine Rechte gegenüber deiner Pflegekasse wahrzunehmen.",
-  },
-  {
-    q: "Was, wenn ich mitten im Chat nicht weiterweiß?",
-    a: "Kein Problem. Du kannst den Chat jederzeit pausieren und später fortsetzen. Wir bleiben dran.",
+    a: "Wir nutzen deine Nachrichten ausschließlich, um dich zu beraten. Wir geben sie nicht an Dritte weiter. Die vollständigen Details stehen in unserer Datenschutzerklärung. Wenn du nicht einverstanden bist, kannst du den Chat jederzeit beenden.",
   },
 ];
 
-const SERVICES = [
+const PAIN_BULLETS = [
   {
-    title: "Pflegegeld-Antrag stellen",
-    text: "Wir erstellen mit dir einen fertigen Antrag als PDF — du musst ihn nur noch einreichen.",
+    headline: "Pflegegeld beantragen.",
+    body: "Für dich oder einen Angehörigen, und du weißt nicht, wo du anfangen sollst.",
   },
   {
-    title: "Pflegegrad einschätzen",
-    text: "In einem ruhigen Gespräch schätzen wir gemeinsam ein, welcher Pflegegrad realistisch ist — und wie du dich auf die Begutachtung vorbereitest.",
+    headline: "Angst, etwas falsch zu machen.",
+    body: "Du hast gehört, dass viele weniger bekommen, als ihnen zusteht. Nur weil im Antrag das Falsche steht.",
   },
   {
-    title: "Leistungen kombinieren",
-    text: "Wenn der Pflegegrad steht: Wir zeigen dir, welche Leistungen dir zustehen und wie du sie sinnvoll kombinierst.",
+    headline: "Jemand, der mit dir durchgeht.",
+    body: "Statt allein durch fünfzehn Behörden-Seiten zu googeln.",
+  },
+];
+
+const STEPS = [
+  {
+    headline: "Du schreibst auf WhatsApp.",
+    body: "Ein Klick öffnet WhatsApp. Sag in deinen eigenen Worten, was los ist. Tippen, Sprachnachricht oder ein Foto vom Brief der Pflegekasse, wie du magst.",
   },
   {
-    title: "Überblick bekommen",
-    text: "Du weißt noch nicht genau, was du brauchst? Wir geben dir einen ruhigen Überblick und den passenden ersten Schritt.",
+    headline: "Der Pflegeberater fragt nach.",
+    body: "Er hört zu und stellt die richtigen Fragen, bis er ein klares Bild von eurer Situation hat. Du musst nichts vorbereiten.",
+  },
+  {
+    headline: "Du bekommst, was die Pflegekasse will.",
+    body: "Am Ende hast du die Unterlagen für den Pflegegrad-Antrag und weißt genau, wohin damit. Kein Login, keine Installation, kein Formular zum Selbst-Ausfüllen.",
   },
 ];
 
 const TRUST_ITEMS = [
-  { icon: "building", text: "Ein Angebot der B42 GmbH. Volles Impressum im Footer." },
-  { icon: "shield", text: "Datenschutz nach DSGVO. Deine Nachrichten werden vertraulich behandelt, nicht weitergegeben." },
-  { icon: "heart", text: "Komplett kostenlos. Kein Verkauf, keine versteckten Kosten." },
-  { icon: "clock", text: "Rund um die Uhr erreichbar. Sofortige Antwort, auch nachts und am Wochenende." },
-  { icon: "info", text: "Wir sind kein Ersatz für den Arzt oder den Medizinischen Dienst — aber wir helfen dir, dich darauf vorzubereiten." },
+  {
+    icon: "no-handover",
+    headline: "Wir verkaufen dir nichts.",
+    body: "Wir vermitteln dich an niemanden gegen Provision, verkaufen keine Versicherungen und schicken dir keine Werbe-Mails. Das Angebot ist für dich kostenlos. Sonst nichts.",
+  },
+  {
+    icon: "pause",
+    headline: "Du entscheidest, wann Schluss ist.",
+    body: "Du kannst den Chat jederzeit pausieren oder ganz beenden. Wir machen dir keinen Druck zurückzukommen.",
+  },
+  {
+    icon: "bolt",
+    headline: "Antwort in Sekunden, Tag und Nacht.",
+    body: "Hinter dem Chat steht ein KI-Pflegeberater. Genau deshalb bekommst du sofort eine Antwort, auch nachts und am Wochenende. Ohne Rückrufsorge, ohne Verkaufsdruck, ohne Wartezeit.",
+  },
 ];
 
 function TrustIcon({ type }: { type: string }) {
   const cls = "h-5 w-5 text-teal shrink-0";
   switch (type) {
-    case "building":
+    case "check":
       return (
         <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
         </svg>
       );
-    case "shield":
+    case "no-handover":
       return (
         <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+          <circle cx="12" cy="12" r="9" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5.636 5.636l12.728 12.728" />
         </svg>
       );
-    case "heart":
+    case "pause":
       return (
         <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
         </svg>
       );
-    case "clock":
+    case "bolt":
       return (
         <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      );
-    case "info":
-      return (
-        <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
         </svg>
       );
     default:
-      return null;
+      return (
+        <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      );
   }
 }
 
@@ -153,7 +225,7 @@ function WhatsAppIcon() {
   );
 }
 
-function CtaButton({ position, href, onClick }: { position: "hero" | "bottom"; href: string; onClick: () => void }) {
+function CtaButton({ position, href, onClick }: { position: "hero" | "mid" | "bottom"; href: string; onClick: () => void }) {
   return (
     <a
       href={href}
@@ -171,28 +243,38 @@ function CtaButton({ position, href, onClick }: { position: "hero" | "bottom"; h
 
 function FaqItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [maxHeight, setMaxHeight] = useState(0);
+
+  useEffect(() => {
+    if (!contentRef.current) return;
+    setMaxHeight(open ? contentRef.current.scrollHeight : 0);
+  }, [open, answer]);
+
   return (
     <div className="border-b border-border">
       <button
+        type="button"
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between py-5 text-left text-base font-medium text-foreground"
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-4 py-5 text-left text-base font-medium text-foreground"
       >
-        {question}
+        <span>{question}</span>
         <svg
           className={`h-5 w-5 shrink-0 text-muted transition-transform duration-200 ${open ? "rotate-180" : ""}`}
           fill="none"
           viewBox="0 0 24 24"
-          strokeWidth={2}
+          strokeWidth={1.5}
           stroke="currentColor"
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
         </svg>
       </button>
       <div
-        className="grid transition-[grid-template-rows] duration-300 ease-out"
-        style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
+        className="overflow-hidden transition-[max-height] duration-300 ease-out"
+        style={{ maxHeight: `${maxHeight}px` }}
       >
-        <div className="overflow-hidden">
+        <div ref={contentRef}>
           <p className="pb-5 text-base leading-relaxed text-muted">{answer}</p>
         </div>
       </div>
@@ -202,30 +284,38 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 
 export function LandingPage() {
   const clickIdRef = useRef<string>("");
+  const loadedAtRef = useRef<number>(0);
+  const attributionRef = useRef<Attribution>({});
   const [waLink, setWaLink] = useState("#");
 
   useEffect(() => {
+    loadedAtRef.current = Date.now();
+
     const cid = generateClickId();
     clickIdRef.current = cid;
 
-    const link = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_PRE_TEXT}%0A%23ref-${cid}`;
+    const link = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_PRE_TEXT}`;
     setWaLink(link);
 
-    const utm = getUtmParams();
+    const attribution = captureFirstTouchAttribution();
+    attributionRef.current = attribution;
+
     sendEvent({
       event: "lp_visit",
       pm_cid: cid,
-      ...utm,
-      lp_variant: "whatsapp-only-v01",
+      attribution,
+      lp_variant: "whatsapp-only-v03",
       timestamp: new Date().toISOString(),
     });
   }, []);
 
-  function handleCtaClick(position: "hero" | "bottom") {
+  function handleCtaClick(position: "hero" | "mid" | "bottom") {
     sendEvent({
       event: "cta_click",
       pm_cid: clickIdRef.current,
+      attribution: attributionRef.current,
       button_position: position,
+      time_on_page_ms: loadedAtRef.current > 0 ? Date.now() - loadedAtRef.current : null,
       timestamp: new Date().toISOString(),
     });
   }
@@ -234,78 +324,86 @@ export function LandingPage() {
     <main className="mx-auto max-w-[640px] px-6">
       {/* [1] Hero */}
       <section className="flex min-h-[calc(100dvh-2rem)] flex-col justify-center py-12">
+        <p className="mb-3 text-xs font-medium uppercase tracking-[0.12em] leading-tight text-teal">
+          <span className="whitespace-nowrap">PFLEGEGRAD</span> · <span className="whitespace-nowrap">PFLEGEGELD</span> · <span className="whitespace-nowrap">PFLEGELEISTUNGEN</span>
+        </p>
         <h1 className="text-[clamp(1.75rem,5vw,2.5rem)] font-bold leading-tight tracking-tight text-foreground">
-          Hilfe beim Pflegegeld-Antrag — per Chat.
+          Brauchst du Hilfe beim Pflegegeld-Antrag?
         </h1>
         <p className="mt-4 text-lg leading-relaxed text-muted">
-          Deine virtuelle Pflegeberatung per WhatsApp. Schreib uns — wir begleiten dich Schritt für Schritt.
+          Schreib uns per WhatsApp. Wir führen dich durch den gesamten Prozess, von der ersten Frage bis zum Bescheid.
         </p>
         <div className="mt-8">
           <CtaButton position="hero" href={waLink} onClick={() => handleCtaClick("hero")} />
         </div>
-        <p className="mt-4 text-sm text-muted">
-          Rund um die Uhr. Sofortige Antwort. Kostenlos.
-        </p>
-      </section>
-
-      {/* [2] Was wir konkret tun */}
-      <section className="py-16">
-        <h2 className="text-xl font-bold text-foreground">
-          Vier konkrete Dinge, bei denen wir dich unterstützen:
-        </h2>
-        <div className="mt-8 space-y-6">
-          {SERVICES.map((s, i) => (
-            <div key={i} className="rounded-2xl bg-white p-6 shadow-sm">
-              <div className="flex items-start gap-4">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-teal/10 text-sm font-bold text-teal">
-                  {i + 1}
-                </span>
-                <div>
-                  <h3 className="font-semibold text-foreground">{s.title}</h3>
-                  <p className="mt-1.5 text-base leading-relaxed text-muted">{s.text}</p>
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="mt-4 text-sm text-muted">
+          <p>Rund um die Uhr verfügbar</p>
+          <p>Komplett kostenlos</p>
         </div>
       </section>
 
-      {/* [3] So läuft es ab */}
+      {/* [2] Ist das was für mich? */}
       <section className="py-16">
-        <h2 className="text-xl font-bold text-foreground">So läuft es ab:</h2>
-        <div className="mt-8 space-y-0">
-          {[
-            "Du klickst auf den Button und startest einen Chat mit uns auf WhatsApp.",
-            "Wir stellen ein paar ruhige Fragen — du schreibst einfach in deinen eigenen Worten.",
-            "Am Ende hast du das, was du brauchst: einen fertigen Antrag, eine Einschätzung oder einen klaren nächsten Schritt.",
-          ].map((step, i) => (
-            <div key={i} className="flex gap-4 py-4">
-              <div className="flex flex-col items-center">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-teal text-sm font-bold text-white">
-                  {i + 1}
-                </span>
-                {i < 2 && <div className="mt-2 h-full w-px bg-border" />}
-              </div>
-              <p className="pt-1 text-base leading-relaxed text-foreground">{step}</p>
-            </div>
+        <h2 className="text-xl font-bold text-foreground">Ist das was für mich?</h2>
+
+        {/* [2.1] Pain-Bullets */}
+        <ul className="mt-8 space-y-5">
+          {PAIN_BULLETS.map((item, i) => (
+            <li key={i} className="flex items-start gap-3">
+              <TrustIcon type="check" />
+              <span className="text-base leading-relaxed text-foreground">
+                <span className="font-semibold">{item.headline}</span>{" "}
+                <span className="text-muted">{item.body}</span>
+              </span>
+            </li>
           ))}
+        </ul>
+
+        {/* [2.2] Lead-In zur Mechanik */}
+        <div className="mt-12 border-t border-border pt-8">
+          <p className="text-base text-muted">So läuft es ab:</p>
         </div>
+
+        {/* [2.3] How-it-works-Steps */}
+        <ol className="mt-6 space-y-6">
+          {STEPS.map((step, i) => (
+            <li key={i} className="flex items-start gap-4">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-teal text-sm font-semibold text-white">
+                {i + 1}
+              </span>
+              <div className="pt-1">
+                <p className="text-base font-semibold text-foreground">{step.headline}</p>
+                <p className="mt-1 text-base leading-relaxed text-muted">{step.body}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+
+        {/* [2.4] Inline-CTA */}
+        <div className="mt-10 flex flex-col items-center">
+          <CtaButton position="mid" href={waLink} onClick={() => handleCtaClick("mid")} />
+          <p className="mt-3 text-sm text-muted">Ein Klick. Kein Formular.</p>
+        </div>
+
       </section>
 
-      {/* [4] Trust-Block */}
+      {/* [3] Trust-Block */}
       <section className="rounded-2xl bg-section-alt px-6 py-10">
-        <h2 className="text-xl font-bold text-foreground">Warum du uns vertrauen kannst:</h2>
-        <ul className="mt-6 space-y-4">
+        <h2 className="text-xl font-bold text-foreground">Was wir dir versprechen.</h2>
+        <ul className="mt-6 space-y-6">
           {TRUST_ITEMS.map((item, i) => (
             <li key={i} className="flex items-start gap-3">
               <TrustIcon type={item.icon} />
-              <span className="text-base leading-relaxed text-foreground">{item.text}</span>
+              <div>
+                <p className="text-base font-semibold text-foreground">{item.headline}</p>
+                <p className="mt-1 text-base leading-relaxed text-muted">{item.body}</p>
+              </div>
             </li>
           ))}
         </ul>
       </section>
 
-      {/* [5] Mini-FAQ */}
+      {/* [4] Mini-FAQ */}
       <section className="py-16">
         <h2 className="text-xl font-bold text-foreground">Häufige Fragen</h2>
         <div className="mt-6">
@@ -315,7 +413,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* [6] CTA-Wiederholung */}
+      {/* [5] CTA-Wiederholung */}
       <section className="py-16 text-center">
         <CtaButton position="bottom" href={waLink} onClick={() => handleCtaClick("bottom")} />
         <p className="mt-4 text-sm text-muted">
@@ -323,7 +421,7 @@ export function LandingPage() {
         </p>
       </section>
 
-      {/* [7] Footer */}
+      {/* [6] Footer */}
       <footer className="border-t border-border py-8 text-center text-sm text-muted">
         Ein Angebot der B42 GmbH · <Link href="/impressum" scroll={true} className="underline hover:text-foreground">Impressum</Link> · <Link href="/datenschutz" scroll={true} className="underline hover:text-foreground">Datenschutz</Link>
       </footer>
